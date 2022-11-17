@@ -56,11 +56,11 @@ export const login = async (req, res)=>{
         if(error) return res.status(400).json({
             msg : error.details[0].message,
         });
-        
-        let {email, password} = req.body; 
+
+        let {email, password} = req.body;
         const userExist = await User.findOne({email});
 
-        if(!userExist) res.status(400).json({
+        if(!userExist) res.status(401).json({
             success : false,
             msg: `Invalid credentials`
         });
@@ -72,26 +72,47 @@ export const login = async (req, res)=>{
             msg: `Invalid credentials`
         });
 
-        // create a JWT token
-        const token =jwt.sign({id: userExist._id}, process.env.USER_JWT_SECRET)
-        res.cookie('auth_token', token).status(200).json({
-            success: true,
-            msg: 'Logged in successfully',
-            token : token
-        })
+        // Issue access token
+        const accessToken = jwt.sign(
+            {id: userExist._id},
+            process.env.ACCESS_TOKEN_SECRET,
+            {expiresIn: '30s'});
+
+        // issue refresh token
+        const refreshToken = jwt.sign(
+            {id: userExist._id},
+            process.env.REFRESH_TOKEN_SECRET,
+            {expiresIn: '1d'});
+
+        // store refresh token as a field in the user document in database
+        userExist.refreshToken = refreshToken;
+        await userExist.save();
+
+        // send refresh token in cookiesas httpOnly
+        res.cookie('jwt', refreshToken,{
+            httpOnly:true, 
+            // sameSite:'None',
+            // secure: true,
+            maxAge:24 * 60 * 60 * 1000,
+        });
+        return res.status(200).json({
+            success: 'true',
+            msg: 'Log in successful',
+            accessToken
+        });
     }catch(error){
         if(error instanceof Error){
             res.status(500).json({
                 success : false,
                 msg: error.message
-            })
+            });
         }
     }
 }
 
 export const logout = async (req, res)=>{
     try{
-        return res.clearCookie('auth_token').status(200).json({
+        return res.clearCookie('jwt').status(200).json({
             success: true,
             msg: `Log out successful`
         })
@@ -104,4 +125,63 @@ export const logout = async (req, res)=>{
         }
     }
     
+}
+export const tokenRefresh = async (req, res)=>{
+    try{
+        const cookies = req.cookies;
+        console.log(cookies);
+
+        if(!cookies?.jwt) return res
+        .status(401)
+        .json({
+            success: false, 
+            msg:'Access denied! Sign in' 
+        });
+
+        const refreshToken = cookies.jwt
+        // console.log(refreshToken)
+
+        // check if user account exists in database
+        const user = await User.findOne({refreshToken});
+
+        if(!user) res.status(401).json({
+            success : false,
+            msg: `Access denied! Sign in`
+        });
+
+        // Evaluate refresh token
+        jwt.verify(refreshToken, 
+            process.env.REFRESH_TOKEN_SECRET, 
+            (err, decoded)=>{
+                if(err || user.id != decoded.id) return res.status(403).json({
+                    success: false,
+                    msg: 'Forbidden'
+                });
+
+                // Issue access token
+                const accessToken = jwt.sign(
+                {id: user._id},
+                process.env.ACCESS_TOKEN_SECRET,
+                {expiresIn: '30s'});
+
+                // send access Token
+                return res.status(200).json({
+                success: 'true',
+                msg: 'Log in successful',
+                accessToken
+                });
+            }
+        )
+
+        
+        
+        
+    }catch(error){
+        if(error instanceof Error){
+            res.status(500).json({
+                success : false,
+                msg: error.message
+            });
+        }
+    }
 }

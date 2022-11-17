@@ -14,9 +14,11 @@ app.use(cors());
 app.use(cookieParser());
 
 app.get('/', (req, res)=>{
+    // res.cookie('httpOnly', 'example', {httpOnly: true});
     res.send('<h1>Inventory Api</h1>')
 });
-console.log('waiting for database');
 
 app.use('/api/inventory', itemRouter);
 app.use('/api/inventory', userRouter);
+
+console.log('waiting for database...');

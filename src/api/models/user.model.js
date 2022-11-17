@@ -25,6 +25,11 @@ const userSchema = new Schema({
         required: true,
         minlength: 8,
         maxlength: 128,
+    },
+    refreshToken: {
+        type: String,
+        default: '',
+        select: false
     }
 },{
     timestamp: true
