@@ -76,7 +76,7 @@ export const login = async (req, res)=>{
         const accessToken = jwt.sign(
             {id: userExist._id},
             process.env.ACCESS_TOKEN_SECRET,
-            {expiresIn: '30s'});
+            {expiresIn: '30m'});
 
         // issue refresh token
         const refreshToken = jwt.sign(
@@ -153,7 +153,7 @@ export const tokenRefresh = async (req, res)=>{
         jwt.verify(refreshToken, 
             process.env.REFRESH_TOKEN_SECRET, 
             (err, decoded)=>{
-                if(err || user.id != decoded.id) return res.status(403).json({
+                if(err || user.id !== decoded.id) return res.status(403).json({
                     success: false,
                     msg: 'Forbidden'
                 });
