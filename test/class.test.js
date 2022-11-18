@@ -23,12 +23,29 @@ describe('API TESTS', () => {
         expect(res.text).to.exist
     }).timeout(20000);
 
-    // Fail to passgi
+    // Fail to pass
     it('it should not fetch product data if the end point is wrongly spelt', async ()=>{
         const res = await request(host).get('/api/inventory/item')
         .set("content-type", 'application/json');
 
         expect(res).to.have.status(404)
+    }).timeout(20000);
+
+    // pass to pass
+    it('It should POST a new Item', async ()=>{
+        const res = await request(host)
+        .post('/api/inventory/create-item')
+        .send({
+            name : "Face-cap",
+            category : "Mens Wear",
+            description : "front facing cap",
+            currentValue: 4000,
+            initialPrice : 2500,
+            noInStock: 20
+        })
+        // .set("content-type", 'application/json');
+
+        expect(res).to.have.status(201);
     }).timeout(20000);
 
 })
